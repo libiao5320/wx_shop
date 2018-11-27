@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:mvc="http://www.springframework.org/schema/mvc"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.2.xsd
+							http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.2.xsd
+							http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-3.2.xsd">
+	<!-- 加载系统properties文件配置 -->
+	<bean id="propertyConfigurer" class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+		<property name="locations">
+			<list>
+				<value>classpath:config.properties</value>
+			</list>
+		</property>
+	</bean>
+
+	<!-- freemarker及视图层控制配置 -->
+	<bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+		<property name="viewClass">
+			<value>org.springframework.web.servlet.view.JstlView</value>
+		</property>
+	</bean>
+
+	<context:component-scan base-package="cc.royao.wx" />
+ 
+	<bean id="fmXmlEscape" class="freemarker.template.utility.XmlEscape" />
+	<bean id="freemarkerConfig" class="org.springframework.web.servlet.view.freemarker.FreeMarkerConfigurer">
+		<property name="templateLoaderPath">
+			<value>/WEB-INF/templates</value>
+		</property>
+		<!--  freemarker自定义标签-->
+		<property name="freemarkerVariables">
+			<map>
+			    <entry key="tagHandler" value-ref="tagHandler" />
+				<entry key="xml_escape" value-ref="fmXmlEscape" />
+			</map>
+		</property>
+		<property name="freemarkerSettings">
+			<props>
+				<prop key="template_update_delay">0</prop>
+				<prop key="defaultEncoding">UTF-8</prop>
+				<prop key="url_escaping_charset">UTF-8</prop>
+				<prop key="locale">zh_CN</prop>
+				<prop key="boolean_format">true,false</prop>
+				<prop key="datetime_format">yyyy-MM-dd HH:mm:ss</prop>
+				<prop key="date_format">yyyy-MM-dd</prop>
+				<prop key="time_format">HH:mm:ss</prop>
+				<prop key="number_format">0.######</prop>
+				<prop key="whitespace_stripping">true</prop>
+				<prop key="auto_import">/common/ftl/macro.ftl as s,/common/ftl/tag.ftl as tag</prop>
+				<prop key="template_exception_handler">cc.royao.commons.freemarker.FreemarkerExceptionHandler</prop>				
+			</props>
+		</property>
+	</bean>
+
+	<!-- 配置freeMarker视图解析器 -->
+	<bean id="viewResolver" class="org.springframework.web.servlet.view.freemarker.FreeMarkerViewResolver">
+		<property name="viewClass">
+			<value>
+				org.springframework.web.servlet.view.freemarker.FreeMarkerView
+			</value>
+		</property>
+		<property name="contentType" value="text/html;charset=utf-8" />
+		<property name="cache" value="true" />
+		<property name="suffix" value=".ftl" />
+		<property name="order" value="0" />
+	</bean>
+
+	<bean id="multipartResolver" class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
+		<property name="maxUploadSize" value="104857600" />
+	</bean>
+
+	<bean class="org.springframework.web.servlet.mvc.annotation.AnnotationMethodHandlerAdapter" />
+
+	<bean id="loggerInjector" class="cc.royao.commons.logger.LoggerInjector" />
+
+	<context:annotation-config />
+
+	<mvc:annotation-driven>
+		<!-- 消息转换器 -->
+		<mvc:message-converters register-defaults="true">
+			<bean class="org.springframework.http.converter.StringHttpMessageConverter">
+				<property name="supportedMediaTypes" value="text/html;charset=UTF-8"/>
+			</bean>
+			<bean id="fastJsonHttpMessageConverter" class="com.alibaba.fastjson.support.spring.FastJsonHttpMessageConverter">
+				<property name="supportedMediaTypes">
+					<list>
+						<value>text/html;charset=UTF-8</value>
+					</list>
+				</property>
+			</bean>
+		</mvc:message-converters>
+	</mvc:annotation-driven>
+	<mvc:interceptors>
+		<mvc:interceptor>
+			<mvc:mapping path="/**"/>
+			<mvc:exclude-mapping path="/wxAuth.htm"/>
+			<mvc:exclude-mapping path="/registerred/*"/>
+			<bean class="cc.royao.commons.interceptor.AnnotationInterceptor">
+				<property name="loginUrl" value="/login.htm" />
+			</bean>
+		</mvc:interceptor>
+	<bean class="cc.royao.commons.interceptor.ParameterInterceptor">
+			<property name="version" value="${version}" />
+		</bean>
+	</mvc:interceptors>
+
+
+	<bean id="wxAuthUtil" class="cc.royao.commons.auth.WxAuthUtil"></bean>
+
+	<!-- 验证码控制
+
+	<bean id="captchaProducer" class="com.google.code.kaptcha.impl.DefaultKaptcha">
+		<property name="config">
+			<bean class="com.google.code.kaptcha.util.Config">
+				<constructor-arg>
+					<props>
+						<prop key="kaptcha.border">no</prop>
+						<prop key="kaptcha.producer.impl">
+							com.google.code.kaptcha.impl.DefaultKaptcha
+						</prop>
+						<prop key="kaptcha.textproducer.impl">
+							com.google.code.kaptcha.text.impl.DefaultTextCreator
+						</prop>
+						<prop key="kaptcha.textproducer.char.string">0123456789</prop>
+						<prop key="kaptcha.textproducer.char.length">5</prop>
+						<prop key="kaptcha.textproducer.font.names">YaHei</prop>
+						<prop key="kaptcha.textproducer.font.size">28</prop>
+						<prop key="kaptcha.textproducer.font.color">BLACK</prop>
+						<prop key="kaptcha.textproducer.char.space">5</prop>
+						<prop key="kaptcha.noise.impl">
+							com.google.code.kaptcha.impl.NoNoise
+						</prop>
+						<prop key="kaptcha.obscurificator.impl">
+							com.google.code.kaptcha.impl.WaterRipple
+						</prop>
+						<prop key="kaptcha.word.impl">
+							com.google.code.kaptcha.text.impl.DefaultWordRenderer
+						</prop>
+						<prop key="kaptcha.background.impl">
+							com.google.code.kaptcha.impl.DefaultBackground
+						</prop>
+						<prop key="kaptcha.background.clear.from">WHITE</prop>
+						<prop key="kaptcha.background.clear.to">WHITE</prop>
+						<prop key="kaptcha.image.width">120</prop>
+						<prop key="kaptcha.image.height">32</prop>
+					</props>
+				</constructor-arg>
+			</bean>
+		</property>
+	</bean>
+
+	-->
+</beans>
